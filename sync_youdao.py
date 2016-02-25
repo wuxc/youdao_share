@@ -75,6 +75,11 @@ def get_group_share(gid, token):
     r = requests.get(url)
     data = json.loads(r.text)
 
+    if data["fileModel"]["dir"]:
+        path_strip_len = len(data["fileModel"]["name"])+1
+    else:
+        path_strip_len = 0
+
     ## 递归生成文件列表，可能会消耗比较长的时间
     files = {}
     def _walk(info, ppath=""):
@@ -95,29 +100,32 @@ def get_group_share(gid, token):
                     fileid = str(child["fileId"])
                     files[fileid] = {
                         "fname": child["name"],
+                        "title": child["title"],
                         "version" : child["version"],
+                        "createtime" : child["createTime"],
                         "lastuptime" : child["lastUpdateTime"],
-                        "path" : "%s%s/%s" % (ppath, fileinfo["name"], child["name"]),
+                        "path" : ("%s%s/%s" % (ppath, fileinfo["name"], child["name"]))[path_strip_len:],
                     }
         else:
             fileid = str(fileinfo["fileId"])
             files[fileid] = {
                 "fname": fileinfo["name"],
+                "title": fileinfo["title"],
                 "version" : fileinfo["version"],
+                "createtime" : fileinfo["createTime"],
                 "lastuptime" : fileinfo["lastUpdateTime"],
-                "path" : "%s%s" % (ppath, fileinfo["name"]),
+                "path" : ("%s%s" % (ppath, fileinfo["name"]))[path_strip_len:],
             }
     
     _walk(data)
     return files
 
+def add_post_meta(info):
+    pass
 
-def sync_blog_posts(gid, token, backup="posts.json", ppath="posts/", savedir="./_posts"):
+def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts"):
 
-    def _get_dstpath(path):
-        if path.startswith(ppath):
-            path = path[len(ppath):]
-        return os.path.abspath(os.path.join(HERE, savedir, path))
+    _get_dstpath = lambda p : os.path.abspath(os.path.join(HERE, savedir, p))
 
     current = {}
     if os.path.isfile(backup):
@@ -129,11 +137,23 @@ def sync_blog_posts(gid, token, backup="posts.json", ppath="posts/", savedir="./
         print "checking", fileid, fileid in current, info
         if fileid not in current or info["lastuptime"] > current[fileid]["lastuptime"]:
             try:
-                content = get_group_share_file(gid, token, fileid, info["fname"], info["version"])
                 path = _get_dstpath(info["path"])
                 if not os.path.exists(os.path.dirname(path)):
                     os.makedirs(os.path.dirname(path))
+                content = get_group_share_file(gid, token, fileid, info["fname"], info["version"])
+                # add meta info for markdown files, for example:
+                #    title: test
+                #    date: 2016-02-25 07:07:38
+                #    tags:
+                #    ---
+                meta = [
+                    "title: %s" % info["title"], 
+                    "date: %s" % time.strftime("%F %T", time.localtime(info["createtime"]/1000.)),
+                    "tags: ",
+                    "---\n",
+                ]
                 with open(path, "w") as f:
+                    f.write("\n".join(meta))
                     f.write(content)
             except:
                 print "sync %s failed %s" % (info["fname"], traceback.format_exc())
@@ -152,10 +172,7 @@ if __name__ == "__main__":
     import time
     from pprint import pprint
     gid = "5170358"
-    #token = "559A7963475242E497CADB8DAC79713D" #md --> raw file
-    #token = "180B72D3965F4B938269C14AEE58BBA2" #table --> json
-    #token = "A80258336CC7406186B8BC39411DB4FB" #note --> html
-    token = "6624F0A167EB4225A30B166C2755C903" #folder --> dict
+    token = "6624F0A167EB4225A30B166C2755C903" ## should share a folder
 
     print "%s  %s %s  %s" % ("-"*15, "start sync at", time.ctime(), "-"*15)
     sync_blog_posts(gid, token)
