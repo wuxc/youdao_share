@@ -1,5 +1,5 @@
 ### youdao_share
-搭配Hexo，用有道云协作的群共享里面的Markdown来写blog.
+搭配Hexo，用有道云协作的群共享里面的Markdown来写blog.  
 将此脚本放在hexo blog目录下，用crontab自动检查同步然后生成静态资源.
 
 #### 安装
