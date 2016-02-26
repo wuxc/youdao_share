@@ -146,7 +146,6 @@ def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts")
                 #    date: 2016-02-25 07:07:38
                 #    tags:
                 #    ---
-                print 11111, info["title"], info["title"].rsplit(".", 1)[0]
                 meta = [
                     "title: %s" % info["title"],
                     "date: %s" % time.strftime("%F %T", time.localtime(info["createtime"]/1000.)),
