@@ -1,14 +1,12 @@
 #-*- encoding: utf-8 -*-
 
-from __future__ import unicode_literals
-from __future__ import with_statement
-
 import os
 import urllib
 import requests
 import json
 import re
 import traceback
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 USER_AGENT="Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36"
@@ -93,28 +91,32 @@ def get_group_share(gid, token):
                         "User-Agent":USER_AGENT, 
                         "HOST":"note.youdao.com",
                     }
-                    r = requests.get(url)
+                    r = requests.get(url, headers=headers)
                     d = json.loads(r.text)
                     _walk(d, "%s%s/" % (ppath, fileinfo["name"]))
                 else:
                     fileid = str(child["fileId"])
+                    path = "%s%s/%s" % (ppath, fileinfo["name"], child["name"])
+                    path = path.lower().replace(" ", "_")[path_strip_len:]
                     files[fileid] = {
                         "fname": child["name"],
-                        "title": child["title"].rsplit(".", 1)[0],
+                        #"title": child["title"].rsplit(".", 1)[0],
                         "version" : child["version"],
                         "createtime" : child["createTime"],
                         "lastuptime" : child["lastUpdateTime"],
-                        "path" : ("%s%s/%s" % (ppath, fileinfo["name"], child["name"]))[path_strip_len:],
+                        "path" : path,
                     }
         else:
             fileid = str(fileinfo["fileId"])
+            path = "%s%s" % (ppath, fileinfo["name"])
+            path = path.lower().replace(" ", "_")[path_strip_len:]
             files[fileid] = {
                 "fname": fileinfo["name"],
-                "title": fileinfo["title"].rsplit(".", 1)[0],
+                #"title": fileinfo["title"].rsplit(".", 1)[0],
                 "version" : fileinfo["version"],
                 "createtime" : fileinfo["createTime"],
                 "lastuptime" : fileinfo["lastUpdateTime"],
-                "path" : ("%s%s" % (ppath, fileinfo["name"]))[path_strip_len:],
+                "path" : path,
             }
     
     _walk(data)
@@ -141,13 +143,17 @@ def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts")
                 if not os.path.exists(os.path.dirname(path)):
                     os.makedirs(os.path.dirname(path))
                 content = get_group_share_file(gid, token, fileid, info["fname"], info["version"])
+                if "\n" in content:
+                    firstline, content = content.split("\n", 1)
+                else:
+                    firstline, content = content, ""
                 # add meta info for markdown files, for example:
                 #    title: test
                 #    date: 2016-02-25 07:07:38
                 #    tags:
                 #    ---
                 meta = [
-                    "title: %s" % info["title"],
+                    "title: %s" % firstline,
                     "date: %s" % time.strftime("%F %T", time.localtime(info["createtime"]/1000.)),
                     "tags: ",
                     "---\n",
@@ -169,12 +175,12 @@ def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts")
         f.write(json.dumps(latest, indent=4))
 
 if __name__ == "__main__":
-    import time
-    from pprint import pprint
+    #from pprint import pprint
     gid = "5170358"
     token = "6624F0A167EB4225A30B166C2755C903" ## should share a folder
 
     print "%s  %s %s  %s" % ("-"*15, "start sync at", time.ctime(), "-"*15)
     sync_blog_posts(gid, token)
-    print "%s  %s %s  %s" % ("-"*16, "end sync at", time.ctime(), "-"*16)
+    print "%s  %s %s  %s" % ("-"*15, " done sync at", time.ctime(), "-"*15)
+    print
 
