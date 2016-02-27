@@ -1,6 +1,7 @@
 #-*- encoding: utf-8 -*-
 
 import os
+import sys
 import urllib
 import requests
 import json
@@ -126,6 +127,7 @@ def add_post_meta(info):
     pass
 
 def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts"):
+    changed = False
 
     _get_dstpath = lambda p : os.path.abspath(os.path.join(HERE, savedir, p))
 
@@ -161,6 +163,7 @@ def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts")
                 with open(path, "w") as f:
                     f.write("\n".join(meta))
                     f.write(content)
+                changed = True
             except:
                 print "sync %s failed %s" % (info["fname"], traceback.format_exc())
         else:
@@ -174,13 +177,16 @@ def sync_blog_posts(gid, token, backup="posts.json", savedir="../source/_posts")
     with open(backup, "w") as f:
         f.write(json.dumps(latest, indent=4))
 
+    return changed
+
 if __name__ == "__main__":
     #from pprint import pprint
     gid = "5170358"
     token = "6624F0A167EB4225A30B166C2755C903" ## should share a folder
 
     print "%s  %s %s  %s" % ("-"*15, "start sync at", time.ctime(), "-"*15)
-    sync_blog_posts(gid, token)
+    changed = sync_blog_posts(gid, token)
+    sys.exit(not changed)
     print "%s  %s %s  %s" % ("-"*15, " done sync at", time.ctime(), "-"*15)
     print
 
